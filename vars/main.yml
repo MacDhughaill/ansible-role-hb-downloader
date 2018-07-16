@@ -1,0 +1,9 @@
+---
+hbdl_directories:
+  - hb_downloader
+  - py_virt
+hbdl_absent_files:
+  - .coveragerc
+  - LICENSE
+  - README.md
+  - .travis.yml

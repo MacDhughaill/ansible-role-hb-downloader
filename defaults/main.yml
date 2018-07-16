@@ -1,0 +1,4 @@
+---
+hbdl_download_location: "/home/{{ ansible_user_id }}/Downloads"
+hbdl_root_dir: "/home/{{ ansible_user_id }}/humblebundletool"
+# hbdl_session_cookie:

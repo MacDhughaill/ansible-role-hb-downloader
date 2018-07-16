@@ -1,0 +1,87 @@
+---
+- include_vars: "hbdl_{{ ansible_distribution }}_vars.yml"
+- include_tasks: "hbdl_{{ ansible_distribution }}_tasks.yml"
+
+# download phase
+- name: Create temporary download directory
+  tempfile:
+    state: directory
+  register: hbdl_temp_dl_dir
+
+- name: Download hb-downloader
+  get_url:
+    url: https://github.com/MayeulC/hb-downloader/archive/master.zip
+    dest: "{{ hbdl_temp_dl_dir.path }}/hbdl.zip"
+
+- name: Unpack hb-downloader
+  unarchive:
+    src: "{{ hbdl_temp_dl_dir.path }}/hbdl.zip"
+    remote_src: true
+    dest: "{{ hbdl_temp_dl_dir.path }}/"
+
+- name: Collect list of unpacked files
+  find:
+    paths: "{{ hbdl_temp_dl_dir.path }}/hb-downloader-master"
+    recurse: true
+  register: hbdl_find_unpacked
+
+- name: Collect list of interim directories for unpacked files
+  find:
+    paths: "{{ hbdl_temp_dl_dir.path }}/hb-downloader-master"
+    recurse: true
+    file_type: directory
+  register: hbdl_find_unpacked_dirs
+
+# installation phase
+- name: Create top level directories
+  file:
+    path: "{{ hbdl_root_dir }}/{{ item }}"
+    state: directory
+  with_items: "{{ hbdl_directories }}"
+
+# This task exists because the copy task further down won't recursively copy from paths on the remote machine.
+- name: Create interim directories
+  file:
+    path: "{{ hbdl_root_dir }}/hb_downloader/{{ item.path | regex_replace('.*hb-downloader-master/(.*)', '\\1') }}"
+    state: directory
+  with_items: "{{ hbdl_find_unpacked_dirs.files }}"
+
+- name: Install python dependencies in virtualenv
+  pip:
+    name: "pyyaml requests"
+    state: present
+    virtualenv: "{{ hbdl_root_dir}}/py_virt"
+    virtualenv_command: "{{ hbdl_virtualenv_command }}"
+    virtualenv_python: "{{ hbdl_virtualenv_python }}"
+
+- name: Copy hb-downloader to created directory
+  copy:
+    src: "{{ item.path }}"
+    remote_src: true
+    dest: "{{ hbdl_root_dir }}/hb_downloader/{{ item.path | regex_replace('.*hb-downloader-master/(.*)', '\\1') }}"
+  with_items: "{{ hbdl_find_unpacked.files }}"
+
+- name: Set hb-downloader as executable
+  file:
+    path: "{{ hbdl_root_dir }}/hb_downloader/hb-downloader.py"
+    mode: u+x
+
+- name: Set auth token value and download location in settings
+  lineinfile:
+    state: present
+    path: "{{ hbdl_root_dir }}/hb_downloader/hb-downloader-settings.yaml"
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+  with_items:
+    - regexp: 'session-cookie'
+      line: "session-cookie: '{{ hbdl_session_cookie }}'"
+    - regexp: 'download-location'
+      line: "download-location: {{ hbdl_download_location }}"
+
+- name: Add Video platform to settings
+  lineinfile:
+    state: present
+    path: "{{ hbdl_root_dir }}/hb_downloader/hb-downloader-settings.yaml"
+    regexp: '(download-platforms.*)'
+    backrefs: true
+    line: '\1\n  video: True'

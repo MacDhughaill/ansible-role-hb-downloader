@@ -1,0 +1,14 @@
+---
+- block:
+  - name: Install SCL repository on CentOS
+    yum:
+      name: 'centos-release-scl'
+      state: present
+      update_cache: true
+
+  - name: Install necessary packages on CentOS
+    yum:
+      name: "{{ hbdl_CentOS_packages }}"
+      state: present
+      update_cache: true
+  become: true

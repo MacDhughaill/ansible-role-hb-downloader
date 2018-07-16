@@ -1,0 +1,5 @@
+---
+hbdl_CentOS_packages:
+  - rh-python36
+hbdl_virtualenv_command: "/opt/rh/rh-python36/root/usr/bin/virtualenv"
+hbdl_virtualenv_python: "/opt/rh/rh-python36/root/usr/bin/python"
